@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Telephantast\MessageBus;
 
+use IteratorAggregate;
+use NoRewindIterator;
 use Telephantast\Message\Message;
 
 /**
@@ -38,7 +40,19 @@ final class Pipeline
      */
     public static function handle(MessageContext $messageContext, Handler $handler, iterable $middlewares): mixed
     {
-        $middlewares = \is_array($middlewares) ? new \ArrayIterator($middlewares) : new \IteratorIterator($middlewares);
+        if(\is_array($middlewares))
+        {
+            $middlewares = new \ArrayIterator($middlewares);
+        }
+        else if($middlewares instanceof \IteratorAggregate)
+        {
+            $middlewares = new \IteratorIterator(new NoRewindIterator($middlewares->getIterator()));
+            $middlewares->rewind();
+        }
+        else
+        {
+            $middlewares = new \IteratorIterator($middlewares);
+        }
 
         if (!$middlewares->valid()) {
             return $handler->handle($messageContext);
